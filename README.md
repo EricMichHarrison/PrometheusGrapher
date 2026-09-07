@@ -1,6 +1,84 @@
 # PrometheusGrapher
 
-A real-time mathematical function graphing calculator application for the **M5Stack Cardputer** (ESP32-S3 based device). This project provides an intuitive interface to visualize and explore mathematical equations directly on the device's display.
+A real-time mathematical function graphing calculator application for the **M5Stack Cardputer** (ESP32-S3 based device), by SupremeEgg75. This project provides an intuitive interface to visualize and explore mathematical equations directly on the device's display.
+
+## Migration note (read this first)
+
+This copy of the project has been migrated onto a testable core/hal/ui/sim
+architecture (the same one used in a companion "cardputer-typewriter" demo
+project). If you're comparing this against your original source, here's
+exactly what changed and why:
+
+- **`ExpressionParser` moved to `lib/core/`**, ported from Arduino's
+  `String` to `std::string` and with `<Arduino.h>` dropped, so it has
+  zero hardware includes. Same grammar, same AST, same evaluation
+  semantics — verified against the original algorithm's expected
+  output for 17 cases (precedence, implicit multiplication, domain
+  errors, parse failures) before being trusted. Device code converts
+  at the boundary (`std::string(arduinoString.c_str())`).
+- **New: `lib/core/GrapherState`** — the equation slots, which one is
+  graphed, and the pan position, which used to be loose globals
+  (`lineEntries[]`, `selEquation`, `posx`/`posy`) in `main.cpp`. Now a
+  small hardware-free class with native tests.
+- **New: `lib/core/Framebuffer` + `lib/ui/GraphRenderer`** — and this
+  is the one actual behavior change, not just a refactor: **the
+  original `DrawGraphPage()` never actually plotted the curve.** It
+  drew the grid and axes and then just printed the selected equation's
+  slot *number* where the comment says
+  `// === PUT EQUATION GRAPHING DRAWER HERE ===`. `GraphRenderer` fills
+  that in — it samples the equation across the screen width using the
+  existing (but previously unused for this) `evaluateExpression()` and
+  actually draws the curve, correctly leaving gaps where the function
+  is undefined (e.g. `sqrt(x)` for negative `x`). Verified visually —
+  a plotted sine wave, a parabola, and the `sqrt(x)` domain gap all
+  render exactly as expected; see the screenshots referenced in the
+  handoff conversation.
+- **`FunctionMenu()`, `SelectExpression()` (renamed
+  `SelectEquationSlot()`), and `helpScreen()` were deliberately NOT
+  migrated** — they're menu/list screens with no logic worth
+  unit-testing, so rewriting their working M5GFX drawing code wasn't
+  worth the risk for this pass. They now read/write equation text
+  through `GrapherState` instead of touching `lineEntries[]` directly,
+  but draw the same way they always did.
+- **`Settings.cpp` (marked WIP in the original) is untouched.**
+- **`platformio.ini`**: the original `[env:cardputer_adv]` block is
+  preserved byte-for-byte (every commented-out feature flag included)
+  with one addition — a `build_src_filter` so it only builds
+  `src/device/*`, since `src/sim/*` (new) is a native-only simulator
+  that must never end up in the firmware. Two new environments,
+  `[env:test-native]` and `[env:sim]`, were added alongside it.
+
+**What's verified vs. not**, same honesty as always: `lib/core` and
+`lib/ui` were compiled and run directly with a plain `g++` in this
+sandbox (no PlatformIO here) — parser cross-checks, `GrapherState`
+logic, and rendered output (including real plotted curves, viewed as
+images) were all confirmed against real compiled output before being
+written into `test/test_native/test_main.cpp`. **`src/device/*` and
+`[env:cardputer_adv]` were NOT compiled** — no ESP32 toolchain or
+M5Unified/M5GFX libraries available in this sandbox. The device code
+is a faithful, mechanical port of logic that already worked in your
+original `main.cpp`; the main place to look first if something's off
+is `DrawGraphPage()`'s redraw-tracking (`lastPanX`/`lastPanY`/
+`lastSelected`), since that's the one part restructured rather than
+copied verbatim (see the comment block at the top of
+`src/device/main.cpp` for exactly what changed and why).
+
+### Building and testing this version
+
+```bash
+pio run -e cardputer_adv                    # the real firmware, unchanged target
+pio test -e test-native                     # native tests: parser, state, render regressions
+pio run -e sim && .pio/build/sim/program --screens captures/
+.pio/build/sim/program --serve 8123         # open http://localhost:8123 — pan, graph equations, no shell needed
+.pio/build/sim/program --live               # same, but in this terminal instead of a browser
+```
+
+`--serve` gives you a text box to type a new equation into a slot and
+graph it immediately, plus arrow keys to pan and digit keys 1-4 to
+graph an existing slot — all against the exact same `GrapherState` +
+`GraphRenderer` code the device runs.
+
+---
 
 ## Overview
 
@@ -17,8 +95,9 @@ PrometheusGrapher is a specialized graphing application designed for the M5Stack
   - Single variable (`x`) function evaluation
   - Support for constants like `pi`
 
-- **Interactive Graph Viewer**: 
-  - Real-time plotting of mathematical functions
+- **Interactive Graph Viewer**:
+  - Real-time plotting of mathematical functions (newly implemented as
+    part of the migration above — see the migration note)
   - Grid overlay with customizable marker lines
   - Screen navigation/panning with adjustable step speed
   - Automatic scaling based on device display
@@ -54,25 +133,37 @@ PrometheusGrapher is a specialized graphing application designed for the M5Stack
 
 ```
 PrometheusGrapher/
+├── lib/
+│   ├── core/                 # Hardware-free logic (natively testable)
+│   │   ├── ExpressionParser.h/.cpp
+│   │   ├── GrapherState.h/.cpp
+│   │   ├── Framebuffer.h/.cpp
+│   │   ├── Font5x7.h/.cpp
+│   │   └── Cursor.h/.cpp
+│   ├── ui/
+│   │   └── GraphRenderer.h/.cpp   # grid/axes/curve -> Framebuffer
+│   └── hal/
+│       ├── IDisplay.h
+│       └── IKeyboard.h
 ├── src/
-│   ├── main.cpp              # Main application logic and UI
-│   ├── ExpressionParser.cpp  # Mathematical expression parser
-│   ├── ExpressionParser.h    # Parser interface
-│   ├── Settings.cpp          # Settings management
-│   ├── Settings.h            # Settings interface
-│   ├── SettingsList.h        # Settings list definitions
-│   └── Icons.c               # Icon bitmap definitions
-├── include/                  # Custom header files
-├── lib/                      # External libraries
-├── test/                     # Test suite
-├── Extra Dev Files/
-│   └── Icons/                # Icon development resources
-│       ├── Icon_Bitmaps/     # Pre-generated header files
-│       └── Icon_Image_Files/ # Source icon images
-├── platformio.ini            # PlatformIO configuration
-├── build.py                  # Custom build script
-├── custom_8Mb.csv            # Flash partition configuration
-└── README.md                 # This file
+│   ├── device/                # M5Stack Cardputer firmware
+│   │   ├── main.cpp
+│   │   ├── DisplayM5.h
+│   │   ├── Settings.cpp/.h, SettingsList.h
+│   │   └── Icons.c
+│   └── sim/                   # native simulator (no device needed)
+│       ├── main.cpp
+│       ├── PpmWriter.h/.cpp
+│       ├── TerminalView.h/.cpp
+│       ├── InputTerminal.h/.cpp
+│       ├── HttpServer.h/.cpp
+│       └── WebPage.h
+├── test/test_native/          # native Unity tests
+├── scripts/link_winsock.py    # Windows-only linker flag for --serve
+├── platformio.ini
+├── build.py
+├── custom_8Mb.csv
+└── README.md
 ```
 
 ## Hardware Requirements
@@ -86,17 +177,11 @@ PrometheusGrapher/
 - **M5Cardputer** (v1.1.1+) - M5Stack hardware library
 - **M5GFX** - Graphics library for display rendering
 - **Arduino Framework** - ESP32 Arduino compatibility layer
-- Custom **ExpressionParser** - Mathematical expression evaluation
+- Custom **ExpressionParser** - Mathematical expression evaluation (now in `lib/core/`)
 
 All dependencies are configured in `platformio.ini` and automatically installed during build.
 
 ## Building & Uploading
-
-### Prerequisites
-- [PlatformIO](https://platformio.org/install/cli) installed
-- M5Stack Cardputer connected via USB
-
-### Build Instructions
 
 ```bash
 # Build the project

@@ -6,3 +6,6 @@
 .clang-format
 claude-test
 Prometheus_Grapher.bin
+*.ppm
+*.png
+captures/
