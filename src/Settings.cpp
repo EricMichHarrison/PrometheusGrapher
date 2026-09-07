@@ -1,3 +1,9 @@
+//###############################
+//#        THIS IS A WIP        #
+//#  NOT CURRENTLY IMPLEMENTED  #
+//###############################
+
+
 #include <M5Cardputer.h>
 #include <Settings.h>
 #include <SettingsList.h>

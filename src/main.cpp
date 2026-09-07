@@ -1,11 +1,17 @@
 // Inspired by voidos by avascik
 // Author: SupremeEgg75
+// https://github.com/personwithbeans/PrometheusGrapher
 // Liscense: AGPL-3.0
 
 //=== TO DO ===
 // -Add scrool speed adjustment
 // -Add asymptote graphing support
 // -multi-equation graphing
+// -Add ability to position the camera at a specific cordinate
+// -Add zoom and axis scaling (scaling might be tough)
+// -Add boot/SplashScreen
+// -Add Settings menu
+// -Add custom plot colours(maybe even have a special rainbow mode)
 
 #include "ExpressionParser.h"
 #include "Icons.c"
@@ -39,10 +45,11 @@ String tmp = "";
 void DrawGraphPage();
 void FunctionMenu();
 String SelectExpression();
+void helpScreen();
 
 void setup() {
     M5Cardputer.begin();
-    M5Cardputer.Display.setBrightness(10);
+    M5Cardputer.Display.setBrightness(10); // default brightness for now, if I put in a settings menu or add aditional controls this will customizable.
     cx = M5Cardputer.Display.width() / 2;
     cy = M5Cardputer.Display.height() / 2;
     maxx = M5Cardputer.Display.width();
@@ -54,10 +61,7 @@ void setup() {
     }
     M5Cardputer.Display.setBrightness(100);
     Serial.print("=== STARTING ===\n");
-    int textsize = M5Cardputer.Display.height() / 60;
-    if (textsize == 0) {
-        textsize = 1;
-    }
+    M5Cardputer.Display.setTextSize(2);
 }
 
 void loop() {
@@ -67,7 +71,6 @@ void loop() {
 
 void FunctionMenu() { // === Either disable editing of currently drawn functions or redraw after they have been edited.
     M5Cardputer.Display.fillScreen(SystemColour);
-    M5Cardputer.Display.setTextSize(2);
 
     int lineSelection = 1;
     int lineStep = maxy / lines; // distance between drawn lines in screen gride cordinates
@@ -217,6 +220,9 @@ void DrawGraphPage() {
                 // COMPLETE
             }
             goto redrawGraph;
+        } else if (M5Cardputer.Keyboard.isKeyPressed('h')) {
+            helpScreen();
+
         } else if (M5Cardputer.Keyboard.isChange()) {
             if (M5Cardputer.Keyboard.isKeyPressed('`')) {
                 M5Cardputer.Display.clear();
@@ -250,8 +256,9 @@ String SelectExpression() {
             } else { // empty triangle
                 M5Cardputer.Display.drawTriangle(10, (lineStep * lineSelection) - (lineStep / 2), 4, (lineStep * lineSelection) - (lineStep / 2) + 4, 4, (lineStep * lineSelection) - (lineStep / 2) - 4, SystemColour);
             }
+            // === THIS IS MOSTLY HERE INCASE IT GOES BACK TO THE SELECTION SCREEN AND IF I ADD MULTIPLE EQUATION GRAPHING AT SOME POINT ===
             if (selEquation != -1) { // gives green checkmark if equation is alredy drawn
-                M5Cardputer.Display.fillTriangle(10, (lineStep * selEquation) - (lineStep / 2), 4, (lineStep * selEquation) - (lineStep / 2) + 4, 4, (lineStep * selEquation) - (lineStep / 2) - 4, GREEN);
+                M5Cardputer.Display.fillTriangle(10, (lineStep * (selEquation + 1)) - (lineStep / 2), 4, (lineStep * (selEquation + 1)) - (lineStep / 2) + 4, 4, (lineStep * (selEquation + 1)) - (lineStep / 2) - 4, GREEN);
             }
             screenUpdate = false;
         }
@@ -277,5 +284,36 @@ String SelectExpression() {
             lastDebounceTime = currentMillis;
             screenUpdate = true;
         }
+    }
+}
+
+void helpScreen() { // for anyone that wants it will also be displayed on the cardputer' screen but condensed info
+    int numLines = 5;
+    int distBetwTxt = (M5Cardputer.Display.height() - 20) / numLines;
+    const char *helpText[numLines] = {
+        "Arrow keys to move",
+        "c to reset view",
+        "Esc to go back",
+        "g to graph equaiton",
+        "serial 4 xtra deets"};
+    M5.Display.clear();
+    // the following serial is just if anyone wants more details info
+    delay(100);
+    Serial.println("=== HELP MENU ==="); // same info will apear on screen but condensed.
+    Serial.println("Arrowkeys to move [No need for holding the function key].");
+    Serial.println("Escape to switch betweeen funciton editing and graphing.");
+    Serial.println("When on the Graphing Screen press c to reset view to (0,0) 'center'.");
+    Serial.println("When on the Graphing screen press g to select equation(s) to plot.");
+    Serial.println("if in any menu you don't want to be in press esc to cancel/back out.");
+    // Uncomment if multi funciton plotting is ever added
+    //  Serial.println("If you want to select multiple use SPACE to select and then hit enter to confirm.")
+    delay(100);
+    Serial.println("\n=== GENERAL INFO ===");
+    Serial.println("graph with automatically refresh on each change of position so there shouldn't be any need to manualy refresh or update");
+    delay(100);
+    Serial.println("\n== ABOUT ===");
+    Serial.println("Prometheus Grapher" + (String)versionNum + "Inspired by voidos by avascik\nAuthor: SupremeEgg75\nhttps://github.com/personwithbeans/PrometheusGrapher\nString to equation parser written by Claude (shamfully)");
+    for (int i = 0; i < numLines; i++) { // yeah a for loop whats it to you, I like em.
+        M5Cardputer.Display.drawString(helpText[i], 10, (distBetwTxt * i) + 10);
     }
 }
