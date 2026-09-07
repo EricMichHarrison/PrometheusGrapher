@@ -129,7 +129,7 @@ PrometheusGrapher is a specialized graphing application designed for the M5Stack
 - [ ] Settings menu
 - [ ] Custom plot colors (including rainbow mode)
 
-## Project Structure
+~## Project Structure
 
 ```
 PrometheusGrapher/

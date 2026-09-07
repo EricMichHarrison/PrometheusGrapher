@@ -10,15 +10,11 @@
 # on the MSVC-only `#pragma comment(lib, ...)` trick, which MinGW's
 # g++ silently ignores (that's the warning you saw).
 #
-# NOTE: written against PlatformIO's documented extra_scripts /
-# env.Append(LINKFLAGS=...) pattern but not run through a real
-# PlatformIO build in this sandbox (no network here to install
-# PlatformIO itself). If it doesn't pick up, the fallback is simply
-# adding -lws2_32 by hand to [env:sim] build_flags on your Windows
-# machine.
+# The library is appended through LIBS so PlatformIO emits it after the
+# object files; MinGW's linker needs that order to resolve the symbols.
 
 Import("env")
 import sys
 
 if sys.platform == "win32":
-    env.Append(LINKFLAGS=["-lws2_32"])
+    env.Append(LIBS=["ws2_32"])
