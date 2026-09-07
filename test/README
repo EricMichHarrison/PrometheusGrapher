@@ -50,31 +50,6 @@ PrometheusGrapher is a specialized graphing application designed for the M5Stack
 - [ ] Settings menu
 - [ ] Custom plot colors (including rainbow mode)
 
-## Project Structure
-
-```
-PrometheusGrapher/
-├── src/
-│   ├── main.cpp              # Main application logic and UI
-│   ├── ExpressionParser.cpp  # Mathematical expression parser
-│   ├── ExpressionParser.h    # Parser interface
-management
-│   ├── Settings.h            # Settings interface
-│   ├── Settings.cpp          # Settings 
-│   ├── SettingsList.h        # Settings list definitions
-│   └── Icons.c               # Icon bitmap 
-files
-├── test/                     # Test suite
-├── Extra Dev Files/
-│   └── Icons/                # Icon resources
-│       ├── Icon_Bitmaps/     # header files
-│       └── Icon_Image_Files/ # Source icon images
-├── platformio.ini            # PlatformIO configuration
-├── build.py                  # Custom post-build script
-├── custom_8Mb.csv            # Flash partition configuration
-└── README.md                 # This file
-```
-
 ## Hardware Requirements
 
 - **M5Stack Cardputer** (ESP32-S3 based)
