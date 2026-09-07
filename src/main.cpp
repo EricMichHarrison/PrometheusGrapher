@@ -12,11 +12,16 @@
 // -Add boot/SplashScreen
 // -Add Settings menu
 // -Add custom plot colours(maybe even have a special rainbow mode)
+// -Add multi page help screen
+// -Add grid marking lables [at default scaling every line is 5 units]
+// -Add ability to mark points andget specific cords
+// -Add screen auto sleep/dim
 
 #include "ExpressionParser.h"
 #include "Icons.c"
 #include <M5Cardputer.h>
 #include <algorithm>
+
 #include <string>
 
 extern uint16_t SystemColour;
@@ -36,11 +41,12 @@ int cx = 0;
 int cy = 0;
 int maxx = 0;
 int maxy = 0;
-int posStep = 5; // controls how fast the screen moves in graph view
+int posStep = 5;   // controls how fast the screen moves in graph view
+int zoomScale = 5; // 0 - default. <0 zoom out. >0 zoom in.
 
 int selEquation = -1; // -1 is default when nothing is selected
 const int lines = 4;
-String lineEntries[lines] = {"x^2", "sin(x)", "tan(x)", "2^x"};//default sample equations
+String lineEntries[lines] = {"x^2", "sin(x/(5*pi))", "x", "2^x"}; // default sample equations
 String tmp = "";
 // Forward declarations for functions defined later in this file
 void DrawGraphPage();
@@ -156,41 +162,94 @@ void DrawGraphPage() {
         redrawGraph:
             Serial.print("Graph Redraw...");
             M5Cardputer.Display.drawCenterString("Clearing...", cx, cy);
-            delay(100);           // give time for g key to not register as pressed
-            M5Cardputer.update(); // Update key states
+            delay(100); // give time for g key to not register as pressed
         jumpover:
+            M5Cardputer.update(); // Update key states
+
             M5Cardputer.Display.clear();
-            M5Cardputer.Display.drawLine(cx - posx, 0, cx - posx, maxy, SystemColour);
+            M5Cardputer.Display.drawLine(cx - posx, 0, cx - posx, maxy, SystemColour); // Center lines
             M5Cardputer.Display.drawLine(0, cy + posy, maxx, cy + posy, SystemColour);
             oldPosX = posx;
             oldPosY = posy;
             // im a probably a shity newbie coder so this is probably a shitty
             // way  to do this or at least unoptimized as fuck but it works
-            for (int i = lineStepCount; i < maxx - posx;
+            // === Gridlines ===
+            // === Original code for drawing the lines only here if i need it. ====
+            // for (int i = lineStepCount; i < maxx - posx;
+            //      i += lineStepCount) { // left
+            //     M5Cardputer.Display.drawLine(cx - posx - i, 0, cx - posx - i, maxy, StepColour);
+            // }
+            // for (int i = lineStepCount; i < maxx + posx;
+            //      i += lineStepCount) { // right
+            //     M5Cardputer.Display.drawLine(cx - posx + i, 0, cx - posx + i, maxy, StepColour);
+            // }
+            // for (int i = lineStepCount; i < maxy + posy;
+            //      i += lineStepCount) { // top
+            //     M5Cardputer.Display.drawLine(0, cy + posy - i, maxx, cy + posy - i, StepColour);
+            // }
+            // for (int i = lineStepCount; i < maxy - posy;
+            //      i += lineStepCount) { // bottom
+            //     M5Cardputer.Display.drawLine(0, cy + posy + i, maxx, cy + posy + i, StepColour);
+            // }
+            for (int i = 0; i < maxx;  // One starts at zero to cover the middle while the other doesn't need it.
                  i += lineStepCount) { // left
-                M5Cardputer.Display.drawLine(cx - posx - i, 0, cx - posx - i, maxy, StepColour);
-            }
-            for (int i = lineStepCount; i < maxx + posx;
-                 i += lineStepCount) { // right
-                M5Cardputer.Display.drawLine(cx - posx + i, 0, cx - posx + i, maxy, StepColour);
-            }
-            for (int i = lineStepCount; i < maxy + posy;
-                 i += lineStepCount) { // top
-                M5Cardputer.Display.drawLine(0, cy + posy - i, maxx, cy + posy - i, StepColour);
-            }
-            for (int i = lineStepCount; i < maxy - posy;
-                 i += lineStepCount) { // bottom
-                M5Cardputer.Display.drawLine(0, cy + posy + i, maxx, cy + posy + i, StepColour);
-            }
-            // === PUT EQUATION GRAPHING DRAWER HERE ===
-            if (selEquation != -1) {
-                M5Cardputer.Display.drawString("eq. "+(String)selEquation, 8, 6);
-                uint16_t printColour = plotColours[selEquation];
-                for (int i = -maxx; i < maxx; i++) {//might be faster to increment by 2 instead of one to skip alredy drawn points
-                    M5.Display.drawLine(i - posx+cx, -(evaluateExpression(parsedExpression, i)-posy-cy), i + 1 - posx+cx, -(evaluateExpression(parsedExpression, i + 1)-posy-cy), printColour);
+                if ((cx - posx) != cx - (posx % 20) - i) {
+                    M5Cardputer.Display.drawLine(cx - (posx % 20) - i, 0, cx - (posx % 20) - i, maxy, StepColour); // covers up origin
                 }
             }
+            for (int i = lineStepCount; i < maxx;
+                 i += lineStepCount) { // right
+                // M5Cardputer.Display.drawLine(cx - posx + i, 0, cx - posx + i, maxy, StepColour);
+                if ((cx - posx) != cx - (posx % 20) + i) {
+                    M5Cardputer.Display.drawLine(cx - (posx % 20) + i, 0, cx - (posx % 20) + i, maxy, StepColour);
+                }
+            }
+
+            for (int i = 0; i < maxy;
+                 i += lineStepCount) { // top
+                if ((cy + posy) != cy + (posy % 20) - i) {
+                    M5Cardputer.Display.drawLine(0, cy + (posy % 20) - i, maxx, cy + (posy % 20) - i, StepColour);
+                }
+            }
+            for (int i = lineStepCount; i < maxy;
+                 i += lineStepCount) { // bottom
+                if ((cy + posy) != cy + (posy % 20) + i) {
+                    M5Cardputer.Display.drawLine(0, cy + (posy % 20) + i, maxx, cy + (posy % 20) + i, StepColour);
+                }
+            }
+            // for (int i = lineStepCount; i < maxx + posx;
+            //      i += lineStepCount) { // right
+            //     M5Cardputer.Display.drawCenterString((String)i,cx - posx + i,cy);
+            // }
+            // === Equation Drawer ===
+            if (selEquation != -1) {
+                M5Cardputer.Display.drawString("eq:" + (String)selEquation, 8, 6);
+                uint16_t printColour = plotColours[selEquation];
+                for (int i = -maxx; i < maxx; i++) { // might be faster to increment by 2 instead of one to skip alredy drawn points
+                    M5.Display.drawLine((i - posx + cx), (-(evaluateExpression(parsedExpression, i) - posy - cy)), (i + 1 - posx + cx), (-(evaluateExpression(parsedExpression, i + 1) - posy - cy)), printColour);
+                }
+            }
+            M5Cardputer.Display.drawString("z:" + (String)zoomScale + " s:" + (String)posStep, 4 + M5Cardputer.Display.textWidth("eq:" + (String)selEquation), 6);
             delay(10);
+        }
+        if (M5Cardputer.Keyboard.isChange()) {
+            if (M5Cardputer.Keyboard.isKeyPressed('+')) { // increase panning speed by factor of 2
+                if (posStep < 1000) {
+                    posStep = posStep * 2;
+                }
+                goto jumpover;
+            } else if (M5Cardputer.Keyboard.isKeyPressed('_')) { // decrease panning speed by factor of 2
+                if (posStep > 5) {
+                    posStep = posStep / 2;
+                }
+                goto jumpover;
+            } else if (M5Cardputer.Keyboard.isKeyPressed('-')) { // zoom in
+                zoomScale--;
+                goto jumpover;
+            } else if (M5Cardputer.Keyboard.isKeyPressed('=')) { // zoom out
+                zoomScale++;
+                goto jumpover;
+            }
         }
         if (M5Cardputer.Keyboard.isKeyPressed(',')) { // Left
             posx -= posStep;
@@ -222,7 +281,6 @@ void DrawGraphPage() {
             } else {
                 Serial.print("\n" + expressionString + " Selected, parsing equation..");
                 parsedExpression = parseExpression(expressionString);
-                // COMPLETE ( moved ploting logic to drawing portion)
             }
             goto redrawGraph;
         } else if (M5Cardputer.Keyboard.isKeyPressed('h')) {
@@ -321,12 +379,15 @@ void helpScreen() { // for anyone that wants it will also be displayed on the ca
     for (int i = 0; i < numLines; i++) { // yeah a for loop whats it to you, I like em.
         M5Cardputer.Display.drawString(helpText[i], 10, (distBetwTxt * i) + 10);
     }
-    while(true) {
+    while (true) {
         M5Cardputer.update();
-        if(M5Cardputer.Keyboard.isChange()) {
-            if (M5Cardputer.Keyboard.isKeyPressed('`')||M5Cardputer.Keyboard.isKeyPressed(KEY_ENTER)||M5Cardputer.Keyboard.isKeyPressed('h')) {
+        if (M5Cardputer.Keyboard.isChange()) {
+            if (M5Cardputer.Keyboard.isKeyPressed('`') || M5Cardputer.Keyboard.isKeyPressed(KEY_ENTER) || M5Cardputer.Keyboard.isKeyPressed('h')) {
                 return;
             }
         }
     }
+}
+
+void spashScreen() { // adapt graph drawing function for this with a set equaiton so no need for a parser
 }
