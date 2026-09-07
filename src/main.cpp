@@ -64,7 +64,7 @@ void setup() {
     M5Cardputer.Display.setTextSize(2);
 }
 
-void loop() {
+void loop() {//main loop, the code literly flip flops between these funcitons 
     DrawGraphPage();
     FunctionMenu();
 }
