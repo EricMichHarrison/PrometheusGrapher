@@ -64,7 +64,7 @@ void setup() {
     M5Cardputer.Display.setTextSize(2);
 }
 
-void loop() {//main loop, the code literly flip flops between these funcitons 
+void loop() { // main loop, the code literly flip flops between these funcitons
     DrawGraphPage();
     FunctionMenu();
 }
@@ -102,14 +102,14 @@ void FunctionMenu() { // === Either disable editing of currently drawn functions
             if (currentMillis - lastDebounceTime >= debounceDelay) { // prevent acidental double click
 
                 if (selected) { // typing mode
-                    if (M5Cardputer.Keyboard.isKeyPressed(KEY_BACKSPACE)) {
+                    Keyboard_Class::KeysState status = M5Cardputer.Keyboard.keysState();
+                    if (status.del) {
                         if (lineEntries[lineSelection - 1].length() > 0) {
                             lineEntries[lineSelection - 1].remove(lineEntries[lineSelection - 1].length() - 1);
                         }
                     } else if (M5Cardputer.Keyboard.isKeyPressed('`')) {
                         selected = false;
                     } else {
-                        Keyboard_Class::KeysState status = M5Cardputer.Keyboard.keysState();
                         for (auto i : status.word) {
                             lineEntries[lineSelection - 1] += i;
                         }
