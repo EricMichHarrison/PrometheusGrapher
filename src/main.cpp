@@ -24,6 +24,7 @@ extern uint16_t BackgroundColour;
 extern uint16_t StepColour;
 extern bool instantBoot;
 extern String versionNum;
+extern uint16_t plotColours[4];
 
 // debounce delay
 const unsigned long debounceDelay = 20;
@@ -39,7 +40,7 @@ int posStep = 5; // controls how fast the screen moves in graph view
 
 int selEquation = -1; // -1 is default when nothing is selected
 const int lines = 4;
-String lineEntries[lines] = {"x^2", "test", "test", "test"};
+String lineEntries[lines] = {"x^2", "sin(x)", "tan(x)", "2^x"};//default sample equations
 String tmp = "";
 // Forward declarations for functions defined later in this file
 void DrawGraphPage();
@@ -183,7 +184,11 @@ void DrawGraphPage() {
             }
             // === PUT EQUATION GRAPHING DRAWER HERE ===
             if (selEquation != -1) {
-                M5Cardputer.Display.drawString((String)selEquation, 8, 6);
+                M5Cardputer.Display.drawString("eq. "+(String)selEquation, 8, 6);
+                uint16_t printColour = plotColours[selEquation];
+                for (int i = -maxx; i < maxx; i++) {//might be faster to increment by 2 instead of one to skip alredy drawn points
+                    M5.Display.drawLine(i - posx+cx, -(evaluateExpression(parsedExpression, i)-posy-cy), i + 1 - posx+cx, -(evaluateExpression(parsedExpression, i + 1)-posy-cy), printColour);
+                }
             }
             delay(10);
         }
@@ -217,7 +222,7 @@ void DrawGraphPage() {
             } else {
                 Serial.print("\n" + expressionString + " Selected, parsing equation..");
                 parsedExpression = parseExpression(expressionString);
-                // COMPLETE
+                // COMPLETE ( moved ploting logic to drawing portion)
             }
             goto redrawGraph;
         } else if (M5Cardputer.Keyboard.isKeyPressed('h')) {
@@ -315,5 +320,13 @@ void helpScreen() { // for anyone that wants it will also be displayed on the ca
     Serial.println("Prometheus Grapher" + (String)versionNum + "Inspired by voidos by avascik\nAuthor: SupremeEgg75\nhttps://github.com/personwithbeans/PrometheusGrapher\nString to equation parser written by Claude (shamfully)");
     for (int i = 0; i < numLines; i++) { // yeah a for loop whats it to you, I like em.
         M5Cardputer.Display.drawString(helpText[i], 10, (distBetwTxt * i) + 10);
+    }
+    while(true) {
+        M5Cardputer.update();
+        if(M5Cardputer.Keyboard.isChange()) {
+            if (M5Cardputer.Keyboard.isKeyPressed('`')||M5Cardputer.Keyboard.isKeyPressed(KEY_ENTER)||M5Cardputer.Keyboard.isKeyPressed('h')) {
+                return;
+            }
+        }
     }
 }
