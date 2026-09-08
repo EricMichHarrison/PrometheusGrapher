@@ -3,6 +3,8 @@
 // https://github.com/personwithbeans/PrometheusGrapher
 // Liscense: AGPL-3.0
 
+//This is just a hobby project so expect some issues and if there are any ones that need fixing ill do my best to resolve them as quick as possible but no gauratees
+
 //=== TO DO ===
 // -Add scrool speed adjustment
 // -Add asymptote graphing support
@@ -16,12 +18,12 @@
 // -Add grid marking lables [at default scaling every line is 5 units]
 // -Add ability to mark points andget specific cords
 // -Add screen auto sleep/dim
-
+// -Push limits of grid rendering out by ~10-20 to prevent them from seemingly spawning in. [tentative]
+// -Add possible auto tangent line gen support
 #include "ExpressionParser.h"
 #include "Icons.c"
 #include <M5Cardputer.h>
 #include <algorithm>
-
 #include <string>
 
 extern uint16_t SystemColour;
@@ -30,6 +32,7 @@ extern uint16_t StepColour;
 extern bool instantBoot;
 extern String versionNum;
 extern uint16_t plotColours[4];
+extern bool showGridNums;
 
 // debounce delay
 const unsigned long debounceDelay = 20;
@@ -71,12 +74,12 @@ void setup() {
     M5Cardputer.Display.setTextSize(2);
 }
 
-void loop() { // main loop, the code literly flip flops between these funcitons
+void loop() { // very simple main loop, the code literly flip flops between these funcitons
     DrawGraphPage();
     FunctionMenu();
 }
 
-void FunctionMenu() { // === Either disable editing of currently drawn functions or redraw after they have been edited.
+void FunctionMenu() { // === future note: Either disable editing of currently drawn functions or redraw after they have been edited. ===
     M5Cardputer.Display.fillScreen(SystemColour);
 
     int lineSelection = 1;
@@ -217,16 +220,18 @@ void DrawGraphPage() {
                     M5Cardputer.Display.drawLine(0, cy + (posy % 20) + i, maxx, cy + (posy % 20) + i, StepColour);
                 }
             }
-            // for (int i = lineStepCount; i < maxx + posx;
-            //      i += lineStepCount) { // right
-            //     M5Cardputer.Display.drawCenterString((String)i,cx - posx + i,cy);
-            // }
+            if (showGridNums) {//=== WORK ON ===
+                for (int i = lineStepCount; i < maxx + posx;
+                     i += lineStepCount) { // right
+                    M5Cardputer.Display.drawCenterString((String)i, cx - posx + i, cy);
+                }
+            }
             // === Equation Drawer ===
             if (selEquation != -1) {
                 M5Cardputer.Display.drawString("eq:" + (String)selEquation, 8, 6);
                 uint16_t printColour = plotColours[selEquation];
                 for (int i = -maxx; i < maxx; i++) { // might be faster to increment by 2 instead of one to skip alredy drawn points
-                    M5.Display.drawLine((i - posx + cx), (-(evaluateExpression(parsedExpression, i) - posy - cy)), (i + 1 - posx + cx), (-(evaluateExpression(parsedExpression, i + 1) - posy - cy)), printColour);
+                    M5.Display.drawLine((i - posx + cx)*(double)zoomScale, (-(evaluateExpression(parsedExpression, i) - posy - cy))*(double)zoomScale, (i + 1 - posx + cx)*(double)zoomScale, (-(evaluateExpression(parsedExpression, i + 1) - posy - cy))*(double)zoomScale, printColour);
                 }
             }
             M5Cardputer.Display.drawString("z:" + (String)zoomScale + " s:" + (String)posStep, 4 + M5Cardputer.Display.textWidth("eq:" + (String)selEquation), 6);
@@ -286,7 +291,11 @@ void DrawGraphPage() {
         } else if (M5Cardputer.Keyboard.isKeyPressed('h')) {
             helpScreen();
 
-        } else if (M5Cardputer.Keyboard.isChange()) {
+        } else if (M5Cardputer.Keyboard.isKeyPressed('t')) {
+            showGridNums != showGridNums;
+            goto redrawGraph;
+        } 
+        else if (M5Cardputer.Keyboard.isChange()) {
             if (M5Cardputer.Keyboard.isKeyPressed('`')) {
                 M5Cardputer.Display.clear();
                 delay(100);
@@ -350,6 +359,7 @@ String SelectExpression() {
     }
 }
 
+// === WILL NEED UPDATING AS PROJECT PROGRESSES ===L
 void helpScreen() { // for anyone that wants it will also be displayed on the cardputer' screen but condensed info
     int numLines = 5;
     int distBetwTxt = (M5Cardputer.Display.height() - 20) / numLines;
