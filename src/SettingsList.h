@@ -1,13 +1,41 @@
-//Only Applies to system noises not MP3 Player
+// Only Applies to system noises not MP3 Player
 bool AudioOn = false;
-//Skip Spashscreen
+// Skip Spashscreen
 bool instantBoot = true;
-uint16_t SystemColour = WHITE;  
+uint16_t SystemColour = WHITE;
 uint16_t BackgroundColour = BLACK;
 uint16_t StepColour = 0x7BEF;
 int xmargin = 5;
 int ymargin = 10;
 int TopBarMargin = ymargin + 10;
 String versionNum = "V 0.2.5";
-uint16_t plotColours[4]= {RED,GREEN,BLUE,MAGENTA};//Current max of 4 equations but modify if that changes
+uint16_t plotColours[4] = {RED, GREEN, BLUE, PINK}; // Current max of 4 equations but modify if that changes
 bool showGridNums = true;
+bool showCursor = true;
+int cursorSize = 6; // idealy a number that cleanly divides by 2
+int cursorLineWidth = 2;
+
+// static constexpr int BLACK       = 0x0000;      /*   0,   0,   0 */
+// static constexpr int NAVY        = 0x000F;      /*   0,   0, 128 */
+// static constexpr int DARKGREEN   = 0x03E0;      /*   0, 128,   0 */
+// static constexpr int DARKCYAN    = 0x03EF;      /*   0, 128, 128 */
+// static constexpr int MAROON      = 0x7800;      /* 128,   0,   0 */
+// static constexpr int PURPLE      = 0x780F;      /* 128,   0, 128 */
+// static constexpr int OLIVE       = 0x7BE0;      /* 128, 128,   0 */
+// static constexpr int LIGHTGREY   = 0xD69A;      /* 211, 211, 211 */
+// static constexpr int DARKGREY    = 0x7BEF;      /* 128, 128, 128 */
+// static constexpr int BLUE        = 0x001F;      /*   0,   0, 255 */
+// static constexpr int GREEN       = 0x07E0;      /*   0, 255,   0 */
+// static constexpr int CYAN        = 0x07FF;      /*   0, 255, 255 */
+// static constexpr int RED         = 0xF800;      /* 255,   0,   0 */
+// static constexpr int MAGENTA     = 0xF81F;      /* 255,   0, 255 */
+// static constexpr int YELLOW      = 0xFFE0;      /* 255, 255,   0 */
+// static constexpr int WHITE       = 0xFFFF;      /* 255, 255, 255 */
+// static constexpr int ORANGE      = 0xFDA0;      /* 255, 180,   0 */
+// static constexpr int GREENYELLOW = 0xB7E0;      /* 180, 255,   0 */
+// static constexpr int PINK        = 0xFE19;      /* 255, 192, 203 */
+// static constexpr int BROWN       = 0x9A60;      /* 150,  75,   0 */
+// static constexpr int GOLD        = 0xFEA0;      /* 255, 215,   0 */
+// static constexpr int SILVER      = 0xC618;      /* 192, 192, 192 */
+// static constexpr int SKYBLUE     = 0x867D;      /* 135, 206, 235 */
+// static constexpr int VIOLET      = 0x915C;      /* 180,  46, 226 */

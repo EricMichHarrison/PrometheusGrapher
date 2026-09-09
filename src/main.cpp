@@ -3,7 +3,7 @@
 // https://github.com/personwithbeans/PrometheusGrapher
 // Liscense: AGPL-3.0
 
-//This is just a hobby project so expect some issues and if there are any ones that need fixing ill do my best to resolve them as quick as possible but no gauratees
+// This is just a hobby project so expect some issues and if there are any ones that need fixing ill do my best to resolve them as quick as possible but no gauratees
 
 //=== TO DO ===
 // -Add scrool speed adjustment
@@ -24,6 +24,7 @@
 #include "Icons.c"
 #include <M5Cardputer.h>
 #include <algorithm>
+#include <cmath>
 #include <string>
 
 extern uint16_t SystemColour;
@@ -33,7 +34,9 @@ extern bool instantBoot;
 extern String versionNum;
 extern uint16_t plotColours[4];
 extern bool showGridNums;
-
+extern bool showCursor;
+extern int cursorSize;
+extern int cursorLineWidth;
 // debounce delay
 const unsigned long debounceDelay = 20;
 unsigned long lastDebounceTime = 0;
@@ -44,8 +47,9 @@ int cx = 0;
 int cy = 0;
 int maxx = 0;
 int maxy = 0;
-int posStep = 5;   // controls how fast the screen moves in graph view
-int zoomScale = 5; // 0 - default. <0 zoom out. >0 zoom in.
+int posStep = 4;     // controls how fast the screen moves in graph view
+int zoomScale = 100; // 100 - default. <100 zoom in. >100 zoom out.
+int zoomScaleStep = 5;
 
 int selEquation = -1; // -1 is default when nothing is selected
 const int lines = 4;
@@ -162,18 +166,25 @@ void DrawGraphPage() {
         M5Cardputer.update();
         if (oldPosX != posx || oldPosY != posy) {
             goto jumpover;
-        redrawGraph:
-            Serial.print("Graph Redraw...");
+        redrawGraph: // this fuckery with jumps wont be needed if multi equaiton graph support is added with the different way the selection prosses whould work
+            Serial.println("Graph Redraw...");
+
             M5Cardputer.Display.drawCenterString("Clearing...", cx, cy);
             delay(100); // give time for g key to not register as pressed
         jumpover:
             M5Cardputer.update(); // Update key states
-
             M5Cardputer.Display.clear();
+            lineStepCount = (int)(20 * ((double)zoomScale / (double)100));
+            Serial.println(String("zoom factor: ") + log2(lineStepCount / 20));
+            lineStepCount = lineStepCount / (pow((double)2, (int)log2(lineStepCount / 20)));
             M5Cardputer.Display.drawLine(cx - posx, 0, cx - posx, maxy, SystemColour); // Center lines
             M5Cardputer.Display.drawLine(0, cy + posy, maxx, cy + posy, SystemColour);
             oldPosX = posx;
             oldPosY = posy;
+            if (showCursor) {
+                M5Cardputer.Display.drawWideLine(cx - (cursorSize / 2), cy, cx + (cursorSize / 2), cy,cursorLineWidth,SystemColour);
+                M5Cardputer.Display.drawWideLine(cx, cy - (cursorSize / 2), cx, cy + (cursorSize / 2),cursorLineWidth,SystemColour);
+            }
             // im a probably a shity newbie coder so this is probably a shitty
             // way  to do this or at least unoptimized as fuck but it works
             // === Gridlines ===
@@ -196,42 +207,42 @@ void DrawGraphPage() {
             // }
             for (int i = 0; i < maxx;  // One starts at zero to cover the middle while the other doesn't need it.
                  i += lineStepCount) { // left
-                if ((cx - posx) != cx - (posx % 20) - i) {
-                    M5Cardputer.Display.drawLine(cx - (posx % 20) - i, 0, cx - (posx % 20) - i, maxy, StepColour); // covers up origin
+                if ((cx - posx) != cx - (posx % lineStepCount) - i) {
+                    M5Cardputer.Display.drawLine(cx - (posx % lineStepCount) - i, 0, cx - (posx % lineStepCount) - i, maxy, StepColour); // covers up origin
                 }
             }
             for (int i = lineStepCount; i < maxx;
                  i += lineStepCount) { // right
                 // M5Cardputer.Display.drawLine(cx - posx + i, 0, cx - posx + i, maxy, StepColour);
-                if ((cx - posx) != cx - (posx % 20) + i) {
-                    M5Cardputer.Display.drawLine(cx - (posx % 20) + i, 0, cx - (posx % 20) + i, maxy, StepColour);
+                if ((cx - posx) != cx - (posx % lineStepCount) + i) {
+                    M5Cardputer.Display.drawLine(cx - (posx % lineStepCount) + i, 0, cx - (posx % lineStepCount) + i, maxy, StepColour);
                 }
             }
 
             for (int i = 0; i < maxy;
                  i += lineStepCount) { // top
-                if ((cy + posy) != cy + (posy % 20) - i) {
-                    M5Cardputer.Display.drawLine(0, cy + (posy % 20) - i, maxx, cy + (posy % 20) - i, StepColour);
+                if ((cy + posy) != cy + (posy % lineStepCount) - i) {
+                    M5Cardputer.Display.drawLine(0, cy + (posy % lineStepCount) - i, maxx, cy + (posy % lineStepCount) - i, StepColour);
                 }
             }
             for (int i = lineStepCount; i < maxy;
                  i += lineStepCount) { // bottom
-                if ((cy + posy) != cy + (posy % 20) + i) {
-                    M5Cardputer.Display.drawLine(0, cy + (posy % 20) + i, maxx, cy + (posy % 20) + i, StepColour);
+                if ((cy + posy) != cy + (posy % lineStepCount) + i) {
+                    M5Cardputer.Display.drawLine(0, cy + (posy % lineStepCount) + i, maxx, cy + (posy % lineStepCount) + i, StepColour);
                 }
             }
-            if (showGridNums) {//=== WORK ON ===
-                for (int i = lineStepCount; i < maxx + posx;
-                     i += lineStepCount) { // right
-                    M5Cardputer.Display.drawCenterString((String)i, cx - posx + i, cy);
-                }
-            }
+            // if (showGridNums) {//=== WORK ON ===
+            //     for (int i = lineStepCount; i < maxx + posx;
+            //          i += lineStepCount) { // right
+            //         M5Cardputer.Display.drawCenterString((String)i, cx - posx + i, cy);
+            //     }
+            // }
             // === Equation Drawer ===
             if (selEquation != -1) {
                 M5Cardputer.Display.drawString("eq:" + (String)selEquation, 8, 6);
-                uint16_t printColour = plotColours[selEquation];
+                uint16_t printColour = plotColours[selEquation-1];
                 for (int i = -maxx; i < maxx; i++) { // might be faster to increment by 2 instead of one to skip alredy drawn points
-                    M5.Display.drawLine((i - posx + cx)*(double)zoomScale, (-(evaluateExpression(parsedExpression, i) - posy - cy))*(double)zoomScale, (i + 1 - posx + cx)*(double)zoomScale, (-(evaluateExpression(parsedExpression, i + 1) - posy - cy))*(double)zoomScale, printColour);
+                    M5.Display.drawLine((i - posx + cx), (-(evaluateExpression(parsedExpression, i) - posy - cy)), (i + 1 - posx + cx), (-(evaluateExpression(parsedExpression, i + 1) - posy - cy)), printColour);
                 }
             }
             M5Cardputer.Display.drawString("z:" + (String)zoomScale + " s:" + (String)posStep, 4 + M5Cardputer.Display.textWidth("eq:" + (String)selEquation), 6);
@@ -244,15 +255,9 @@ void DrawGraphPage() {
                 }
                 goto jumpover;
             } else if (M5Cardputer.Keyboard.isKeyPressed('_')) { // decrease panning speed by factor of 2
-                if (posStep > 5) {
+                if (posStep > 1) {
                     posStep = posStep / 2;
                 }
-                goto jumpover;
-            } else if (M5Cardputer.Keyboard.isKeyPressed('-')) { // zoom in
-                zoomScale--;
-                goto jumpover;
-            } else if (M5Cardputer.Keyboard.isKeyPressed('=')) { // zoom out
-                zoomScale++;
                 goto jumpover;
             }
         }
@@ -267,6 +272,18 @@ void DrawGraphPage() {
         } else if (M5Cardputer.Keyboard.isKeyPressed('c')) { // center position
             posx = 0;
             posy = 0;
+        } else if (M5Cardputer.Keyboard.isKeyPressed('z')) { // maybe just move to c in future
+            zoomScale = 100;
+            goto jumpover;
+        } else if (M5Cardputer.Keyboard.isKeyPressed('-')) { // zoom in
+            if (zoomScale > 100) {
+                zoomScale -= zoomScaleStep;
+                goto jumpover;
+            }
+        } else if (M5Cardputer.Keyboard.isKeyPressed('=')) { // zoom out
+            zoomScale += zoomScaleStep;
+
+            goto jumpover;
         } else if (M5Cardputer.Keyboard.isKeyPressed('g')) { // select function to graph, if one is alredy selected deletes it and redraws grid empty
             if (selEquation != -1) {
                 Serial.print("Clearing expression...");
@@ -294,8 +311,7 @@ void DrawGraphPage() {
         } else if (M5Cardputer.Keyboard.isKeyPressed('t')) {
             showGridNums != showGridNums;
             goto redrawGraph;
-        } 
-        else if (M5Cardputer.Keyboard.isChange()) {
+        } else if (M5Cardputer.Keyboard.isChange()) {
             if (M5Cardputer.Keyboard.isKeyPressed('`')) {
                 M5Cardputer.Display.clear();
                 delay(100);
