@@ -41,20 +41,21 @@ PrometheusGrapher is a specialized graphing application designed for the M5Stack
   - Serial communication for debugging
 
 ### Planned Features (To-Do)
+*note* - a good chunk of these need me to fully figure out the cordinate system so will take a while.
 - [:white_check_mark:]  Add scrool speed adjustment
-- [:red_square:]  Add asymptote graphing support
 - [:red_square:]  multi-equation graphing
 - [:red_square:]  Add ability to jump to specific cordinate
 - [:hourglass_flowing_sand:]  Add zoom and axis scaling (individual scaling might be tough)
-- [:hourglass_flowing_sand:]  Add boot/SplashScreen
+- [:red_square:]  Add boot/SplashScreen  | this wil be the last one probably |
 - [:red_square:]  Add Settings menu
 - [:red_square:]  Add custom plot colours(maybe even have a special rainbow mode)
 - [:red_square:]  Update to using multi page help screen to show more controls on-screen
-- [:hourglass_flowing_sand:]  Add grid marking lables [at default scaling every line is 5 units]
+- [:hourglass_flowing_sand:]  Add grid marking lables [at default scaling every line is 4 units]
 - [:red_square:]  Add ability to mark points and display cordinates of ced point.
 - [:red_square:]  Add screen auto sleep/dim
 - [:red_square:]  Push limits of grid rendering out by ~10-20 to prevent them from seemingly spawning in.
-
+- [:red_square:]  Add possible auto tangent line gen support
+- [:red_square:]  Add current cursor cord on screen.
 ## Project Structure
 
 ```

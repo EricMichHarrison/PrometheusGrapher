@@ -6,8 +6,6 @@
 // This is just a hobby project so expect some issues and if there are any ones that need fixing ill do my best to resolve them as quick as possible but no gauratees
 
 //=== TO DO ===
-// -Add scrool speed adjustment
-// -Add asymptote graphing support
 // -multi-equation graphing
 // -Add ability to position the camera at a specific cordinate
 // -Add zoom and axis scaling (scaling might be tough)
@@ -20,6 +18,8 @@
 // -Add screen auto sleep/dim
 // -Push limits of grid rendering out by ~10-20 to prevent them from seemingly spawning in. [tentative]
 // -Add possible auto tangent line gen support
+// -Add current cursor cord on screen.
+
 #include "ExpressionParser.h"
 #include "Icons.c"
 #include <M5Cardputer.h>
@@ -79,6 +79,7 @@ void setup() {
 }
 
 void loop() { // very simple main loop, the code literly flip flops between these funcitons
+    M5Cardputer.update();
     DrawGraphPage();
     FunctionMenu();
 }
@@ -149,8 +150,6 @@ void FunctionMenu() { // === future note: Either disable editing of currently dr
             screenUpdate = true;
         }
     }
-
-    return;
 }
 
 void DrawGraphPage() {
@@ -167,23 +166,21 @@ void DrawGraphPage() {
         if (oldPosX != posx || oldPosY != posy) {
             goto jumpover;
         redrawGraph: // this fuckery with jumps wont be needed if multi equaiton graph support is added with the different way the selection prosses whould work
-            Serial.println("Graph Redraw...");
-
-            M5Cardputer.Display.drawCenterString("Clearing...", cx, cy);
+            Serial.println("Manual Graph Redraw Triggered...");
             delay(100); // give time for g key to not register as pressed
         jumpover:
             M5Cardputer.update(); // Update key states
             M5Cardputer.Display.clear();
             lineStepCount = (int)(20 * ((double)zoomScale / (double)100));
-            Serial.println(String("zoom factor: ") + log2(lineStepCount / 20));
+            // Serial.println(String("zoom factor: ") + log2(lineStepCount / 20));
             lineStepCount = lineStepCount / (pow((double)2, (int)log2(lineStepCount / 20)));
             M5Cardputer.Display.drawLine(cx - posx, 0, cx - posx, maxy, SystemColour); // Center lines
             M5Cardputer.Display.drawLine(0, cy + posy, maxx, cy + posy, SystemColour);
             oldPosX = posx;
             oldPosY = posy;
             if (showCursor) {
-                M5Cardputer.Display.drawWideLine(cx - (cursorSize / 2), cy, cx + (cursorSize / 2), cy,cursorLineWidth,SystemColour);
-                M5Cardputer.Display.drawWideLine(cx, cy - (cursorSize / 2), cx, cy + (cursorSize / 2),cursorLineWidth,SystemColour);
+                M5Cardputer.Display.drawWideLine(cx - (cursorSize / 2), cy, cx + (cursorSize / 2), cy, cursorLineWidth, SystemColour);
+                M5Cardputer.Display.drawWideLine(cx, cy - (cursorSize / 2), cx, cy + (cursorSize / 2), cursorLineWidth, SystemColour);
             }
             // im a probably a shity newbie coder so this is probably a shitty
             // way  to do this or at least unoptimized as fuck but it works
@@ -240,15 +237,15 @@ void DrawGraphPage() {
             // === Equation Drawer ===
             if (selEquation != -1) {
                 M5Cardputer.Display.drawString("eq:" + (String)selEquation, 8, 6);
-                uint16_t printColour = plotColours[selEquation-1];
-                for (int i = -maxx; i < maxx; i++) { // might be faster to increment by 2 instead of one to skip alredy drawn points
-                    M5.Display.drawLine((i - posx + cx), (-(evaluateExpression(parsedExpression, i) - posy - cy)), (i + 1 - posx + cx), (-(evaluateExpression(parsedExpression, i + 1) - posy - cy)), printColour);
+                uint16_t printColour = plotColours[selEquation - 1]; // go and see why you need to do -1 you idiot
+                for (int i = -maxx; i < maxx; i++) {                 // might be faster to increment by 2 instead of one to skip alredy drawn points
+                    M5.Display.drawLine((i * (zoomScale / 100) - posx + cx), (-(evaluateExpression(parsedExpression, i) * (zoomScale / 100) - posy - cy)), ((i + 1) * (zoomScale / 100) - posx + cx), (-(evaluateExpression(parsedExpression, i + 1) * (zoomScale / 100) - posy - cy)), printColour);
                 }
             }
-            M5Cardputer.Display.drawString("z:" + (String)zoomScale + " s:" + (String)posStep, 4 + M5Cardputer.Display.textWidth("eq:" + (String)selEquation), 6);
+            M5Cardputer.Display.drawString("z:" + (String)zoomScale + " s:" + (String)posStep, maxx - M5Cardputer.Display.textWidth("z:" + (String)zoomScale + " s:" + (String)posStep)-10, 6);
             delay(10);
         }
-        if (M5Cardputer.Keyboard.isChange()) {
+        if (M5Cardputer.Keyboard.isChange()) {            // any input here is here to prevent repeat inputs (eg. no holding down button to repeat input)
             if (M5Cardputer.Keyboard.isKeyPressed('+')) { // increase panning speed by factor of 2
                 if (posStep < 1000) {
                     posStep = posStep * 2;
@@ -259,6 +256,13 @@ void DrawGraphPage() {
                     posStep = posStep / 2;
                 }
                 goto jumpover;
+            } else {
+                if (M5Cardputer.Keyboard.isKeyPressed('`')) {
+                    Serial.println("Switching to equation manager...");
+                    M5Cardputer.Display.clear();
+                    delay(100);
+                    return;
+                }
             }
         }
         if (M5Cardputer.Keyboard.isKeyPressed(',')) { // Left
@@ -293,30 +297,25 @@ void DrawGraphPage() {
                 delay(100);
                 goto redrawGraph;
             }
-            Serial.print("\ng Pressed, Entering Seleciton Screen...");
+            Serial.println("'g' Pressed, Entering Seleciton Screen...");
             String expressionString = SelectExpression();
-            Serial.print("\n" + expressionString + " returned...");
+            Serial.println("Equation 'y = " + expressionString + "' returned...");
             if (expressionString == "cancelled") {
                 M5Cardputer.Display.clear();
                 M5Cardputer.Display.drawCenterString("Cancelled...", cx, cy);
                 delay(1000);
             } else {
-                Serial.print("\n" + expressionString + " Selected, parsing equation..");
+                Serial.println("Parsing 'y = " + expressionString + "'...");
                 parsedExpression = parseExpression(expressionString);
             }
             goto redrawGraph;
         } else if (M5Cardputer.Keyboard.isKeyPressed('h')) {
             helpScreen();
+            goto redrawGraph;
 
         } else if (M5Cardputer.Keyboard.isKeyPressed('t')) {
             showGridNums != showGridNums;
             goto redrawGraph;
-        } else if (M5Cardputer.Keyboard.isChange()) {
-            if (M5Cardputer.Keyboard.isKeyPressed('`')) {
-                M5Cardputer.Display.clear();
-                delay(100);
-                return;
-            }
         }
     }
 }
@@ -409,8 +408,12 @@ void helpScreen() { // for anyone that wants it will also be displayed on the ca
         M5Cardputer.update();
         if (M5Cardputer.Keyboard.isChange()) {
             if (M5Cardputer.Keyboard.isKeyPressed('`') || M5Cardputer.Keyboard.isKeyPressed(KEY_ENTER) || M5Cardputer.Keyboard.isKeyPressed('h')) {
+                Serial.println("input detected returning...");
                 return;
             }
+        } else {
+            Serial.println("no input change waiting for 0.5s..");
+            delay(500);
         }
     }
 }
