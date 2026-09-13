@@ -234,6 +234,10 @@ void DrawGraphPage() {
             //         M5Cardputer.Display.drawCenterString((String)i, cx - posx + i, cy);
             //     }
             // }
+            // Serial.println("real cords - (" + (String)posx + "," + (String)posy + ")");//Displays the read cords used for positioning
+            // Serial.println("designated cords - (" + (String)(4 * posx / lineStepCount) + "," + (String)(4 * posy / lineStepCount) + ")");displays the fake cords displayed on screen. at default zoom level 4 per line.
+            M5Cardputer.Display.drawString("(" + (String)(4 * posx / lineStepCount) + "," + (String)(4 * posy / lineStepCount) + ")", 10, maxy - 18);
+
             // === Equation Drawer ===
             if (selEquation != -1) {
                 M5Cardputer.Display.drawString("eq:" + (String)selEquation, 8, 6);
@@ -242,7 +246,7 @@ void DrawGraphPage() {
                     M5.Display.drawLine((i * (zoomScale / 100) - posx + cx), (-(evaluateExpression(parsedExpression, i) * (zoomScale / 100) - posy - cy)), ((i + 1) * (zoomScale / 100) - posx + cx), (-(evaluateExpression(parsedExpression, i + 1) * (zoomScale / 100) - posy - cy)), printColour);
                 }
             }
-            M5Cardputer.Display.drawString("z:" + (String)zoomScale + " s:" + (String)posStep, maxx - M5Cardputer.Display.textWidth("z:" + (String)zoomScale + " s:" + (String)posStep)-10, 6);
+            M5Cardputer.Display.drawString("z:" + (String)zoomScale + " s:" + (String)posStep, maxx - M5Cardputer.Display.textWidth("z:" + (String)zoomScale + " s:" + (String)posStep) - 10, 6);
             delay(10);
         }
         if (M5Cardputer.Keyboard.isChange()) {            // any input here is here to prevent repeat inputs (eg. no holding down button to repeat input)
@@ -286,7 +290,7 @@ void DrawGraphPage() {
             }
         } else if (M5Cardputer.Keyboard.isKeyPressed('=')) { // zoom out
             zoomScale += zoomScaleStep;
-
+            /// === CREATE ZOOM AT CURSOR INSTEAD OF CENTER, NEED TO UPDATE POSX AND POSY ON EACH ZOOM CHANGE ===
             goto jumpover;
         } else if (M5Cardputer.Keyboard.isKeyPressed('g')) { // select function to graph, if one is alredy selected deletes it and redraws grid empty
             if (selEquation != -1) {
