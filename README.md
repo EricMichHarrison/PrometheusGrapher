@@ -1,4 +1,4 @@
-# PrometheusGrapher
+# PrometheusGrapher (WIP)
 
 A real-time mathematical function graphing calculator application for the **M5Stack Cardputer** (ESP32-S3 based device). This project provides an intuitive interface to visualize and explore mathematical equations directly on the device's display.
 
